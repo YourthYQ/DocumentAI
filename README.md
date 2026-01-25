@@ -117,7 +117,6 @@ DocumentAI/
 │   ├── env.example
 │   └── requirements.txt
 ├── tests/                  # API, config, storage, RAG, retrieval, conversation_manager
-├── .github/workflows/      # CI (pytest on push/PR)
 └── README.md
 ```
 
