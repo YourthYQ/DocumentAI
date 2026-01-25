@@ -26,15 +26,15 @@ async def lifespan(app: FastAPI):
         # Depending on policy, you might want to prevent startup or allow it to continue
         # For now, we'll print the error and continue; health check will report it.
 
-    # OpenAI client is initialized when vector_retriever is imported.
-    if vector_retriever.openai_client:
-        print("OpenAI client was initialized.")
+    # OpenAI embeddings (LangChain) are initialized when vector_retriever is imported.
+    if vector_retriever.lc_embeddings_model:
+        print("OpenAI embeddings (LangChain) initialized.")
     else:
-        print("Warning: OpenAI client failed to initialize. Check OPENAI_API_KEY.")
+        print("Warning: OpenAI embeddings failed to initialize. Check OPENAI_API_KEY.")
 
-    # Pinecone client is initialized when vector_retriever is imported.
-    if vector_retriever.pinecone_client:
-        print("Pinecone client was initialized.")
+    # Pinecone admin client is initialized when vector_retriever is imported.
+    if vector_retriever.pinecone_admin_client:
+        print("Pinecone admin client initialized.")
         # Optionally, ensure the main index exists or try to create it
         index_name = settings.PINECONE_INDEX_NAME
         if index_name:
@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
         else:
             print("Warning: PINECONE_INDEX_NAME not set. Pinecone index cannot be checked/created at startup.")
     else:
-        print("Warning: Pinecone client failed to initialize. Check PINECONE_API_KEY and PINECONE_ENVIRONMENT.")
+        print("Warning: Pinecone admin client failed to initialize. Check PINECONE_API_KEY and PINECONE_ENVIRONMENT.")
 
     # Redis client is initialized when conversation_manager is imported.
     if cm.redis_client:

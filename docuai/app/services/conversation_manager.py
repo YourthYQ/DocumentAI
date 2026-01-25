@@ -1,10 +1,16 @@
+import redis
+
 from app.core.config import settings
 from langchain_community.chat_message_histories import RedisChatMessageHistory
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage # Correct import path
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 from typing import List
 
-# Note: The global redis_client and its initialization are removed as
-# RedisChatMessageHistory handles its own Redis connections.
+# Redis client for health checks and startup ping. RedisChatMessageHistory uses its own connections.
+redis_client = None
+try:
+    redis_client = redis.Redis.from_url(settings.REDIS_URL)
+except Exception:
+    redis_client = None
 
 def _get_langchain_history_store(session_id: str) -> RedisChatMessageHistory:
     """

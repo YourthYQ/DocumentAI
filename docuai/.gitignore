@@ -15,6 +15,13 @@ docker-compose.override.yml
 .idea/
 .vscode/
 
+# Env and secrets
+.env
+.env.local
+
+# Uploads (app creates dir at runtime)
+temp_uploads/
+
 # Other
 *.DS_Store
 *.log

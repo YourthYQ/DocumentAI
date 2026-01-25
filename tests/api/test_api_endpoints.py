@@ -60,25 +60,18 @@ def mock_cm_get_history(mocker):
 def test_health_endpoint_all_ok(mocker):
     # Mock all underlying checks to return success
     mocker.patch('app.data.storage.db_client.admin.command', return_value={"ok": 1})
-    # For conversation_manager, RedisChatMessageHistory handles client, so direct ping mock is harder.
-    # We can mock the 'cm.redis_client.ping()' if that specific path is hit.
-    # For this test, assume that if no exception is raised, it's okay, or mock specific checks.
-    # If cm.redis_client doesn't exist (because RedisChatMessageHistory handles it), this path will change.
-    # conversation_manager.py was refactored, no global redis_client.
-    # The health check in endpoints.py tries `cm.redis_client.ping()`. This needs adjustment.
-    # Let's mock the path that health_check actually calls if it exists:
-    mocker.patch('app.services.conversation_manager.redis_client.ping', return_value=True, create=True) # create=True if redis_client might not exist
 
-    # For vector_retriever.lc_embeddings_model (OpenAI)
+    mock_redis = MagicMock()
+    mock_redis.ping.return_value = True
+    mocker.patch('app.services.conversation_manager.redis_client', mock_redis)
+
     mock_lc_embeddings_model = MagicMock()
-    # mock_lc_embeddings_model.embed_query = MagicMock(return_value=[0.1, 0.2]) # If a deeper check is made
     mocker.patch('app.retrieval.vector_retriever.lc_embeddings_model', mock_lc_embeddings_model)
-    
-    # For vector_retriever.pinecone_admin_client and get_vector_store
+
     mock_pinecone_admin = MagicMock()
-    mock_pinecone_admin.list_indexes.return_value = MagicMock() # Simulate successful call
+    mock_pinecone_admin.list_indexes.return_value = MagicMock()
     mocker.patch('app.retrieval.vector_retriever.pinecone_admin_client', mock_pinecone_admin)
-    
+
     mock_vector_store_instance = MagicMock()
     mocker.patch('app.retrieval.vector_retriever.get_vector_store', return_value=mock_vector_store_instance)
 
@@ -87,7 +80,7 @@ def test_health_endpoint_all_ok(mocker):
     data = response.json()
     assert data["status"] == "ok"
     assert data["mongo_status"] == "ok"
-    # assert data["redis_status"] == "ok" # This will depend on the actual check in health_check
+    assert data["redis_status"] == "ok"
     assert data["openai_status"] == "ok (LangChain OpenAIEmbeddings initialized)"
     assert data["pinecone_status"] == "ok (Admin client responsive)"
     assert "ok (VectorStore for" in data["pinecone_index_status"]
@@ -95,8 +88,9 @@ def test_health_endpoint_all_ok(mocker):
 
 def test_health_endpoint_mongo_fail(mocker):
     mocker.patch('app.data.storage.db_client.admin.command', side_effect=Exception("Mongo down"))
-    # Mock other services to be ok to isolate
-    mocker.patch('app.services.conversation_manager.redis_client.ping', return_value=True, create=True)
+    mock_redis = MagicMock()
+    mock_redis.ping.return_value = True
+    mocker.patch('app.services.conversation_manager.redis_client', mock_redis)
     mocker.patch('app.retrieval.vector_retriever.lc_embeddings_model', MagicMock())
     mocker.patch('app.retrieval.vector_retriever.pinecone_admin_client', MagicMock())
     mocker.patch('app.retrieval.vector_retriever.get_vector_store', MagicMock())
@@ -127,7 +121,7 @@ def test_create_document_endpoint_success(
     assert response.status_code == 201
     data = response.json()
     assert data["doc_id"] == "test_doc_id_123"
-    assert "Document added and embedding upserted successfully" in data["message"]
+    assert "Document added to MongoDB and embedding upserted to Pinecone successfully" in data["message"]
     mock_storage_add_document.assert_called_once_with(content=doc_payload["content"], metadata=doc_payload["metadata"])
     mock_vs_upsert_embedding.assert_called_once_with(
         doc_id="test_doc_id_123", 

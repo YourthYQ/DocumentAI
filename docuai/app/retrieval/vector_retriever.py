@@ -114,6 +114,20 @@ def create_pinecone_index_if_not_exists(index_name: str, dimension: int = 1536, 
         print(f"An unexpected error occurred while creating index '{index_name}': {e}")
         return False
 
+
+def get_pinecone_index(index_name: str) -> bool:
+    """
+    Returns True if the Pinecone index exists and is listed by the admin client.
+    """
+    if not pinecone_admin_client:
+        return False
+    try:
+        indexes = pinecone_admin_client.list_indexes()
+        return index_name in [idx.name for idx in indexes.indexes]
+    except Exception:
+        return False
+
+
 # Global cache for vector store instances to avoid re-initialization
 _vector_store_cache = {}
 
