@@ -36,6 +36,7 @@ python-dotenv>=1.0.0,<2.0.0 # For loading .env files, e.g. by docker-compose or 
 
 # Testing (optional, but good to include)
 pytest>=7.0.0,<8.0.0
+pytest-mock>=3.10.0,<4.0.0
 httpx>=0.24.0,<0.28.0 # For async testing with FastAPI TestClient
 
 # Note: Removed chromadb, pypdf, python-docx, unstructured

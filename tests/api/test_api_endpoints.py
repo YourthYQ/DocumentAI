@@ -2,19 +2,21 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 
-# Import the FastAPI app instance
-from app.main import app 
-# Import Pydantic models for request/response validation if needed, or for constructing payloads
+from app.main import app
+from app.data import storage
 from app.api.models import DocumentInput, ChatMessageInput, HealthStatus, DocumentMinimalOutput, ChatMessageOutput, RetrievedDocInfo
 
-# Initialize the TestClient
-# This client will be used to make requests to the FastAPI application
 client = TestClient(app)
-
-# API Prefix for all routes
 API_V1_PREFIX = "/api/v1"
 
 # --- Fixtures ---
+
+
+@pytest.fixture(autouse=True)
+def mock_mongo_connect(mocker):
+    """Mock MongoClient so lifespan and endpoints never touch real MongoDB in CI."""
+    mocker.patch('app.data.storage.MongoClient', return_value=MagicMock())
+
 
 @pytest.fixture
 def mock_storage_add_document(mocker):
@@ -58,8 +60,7 @@ def mock_cm_get_history(mocker):
 # --- Health Endpoint Tests ---
 
 def test_health_endpoint_all_ok(mocker):
-    # Mock all underlying checks to return success
-    mocker.patch('app.data.storage.db_client.admin.command', return_value={"ok": 1})
+    # mock_mongo_connect (autouse) already mocks MongoClient; connect_to_db in lifespan will set db_client. No need to patch db_client.admin.command.
 
     mock_redis = MagicMock()
     mock_redis.ping.return_value = True
@@ -87,14 +88,19 @@ def test_health_endpoint_all_ok(mocker):
 
 
 def test_health_endpoint_mongo_fail(mocker):
-    mocker.patch('app.data.storage.db_client.admin.command', side_effect=Exception("Mongo down"))
+    def _set_failing_db():
+        storage.db_client = MagicMock()
+        storage.db_client.admin.command.side_effect = Exception("Mongo down")
+        storage.db = MagicMock()
+
+    mocker.patch('app.data.storage.connect_to_db', side_effect=_set_failing_db)
+
     mock_redis = MagicMock()
     mock_redis.ping.return_value = True
     mocker.patch('app.services.conversation_manager.redis_client', mock_redis)
     mocker.patch('app.retrieval.vector_retriever.lc_embeddings_model', MagicMock())
     mocker.patch('app.retrieval.vector_retriever.pinecone_admin_client', MagicMock())
     mocker.patch('app.retrieval.vector_retriever.get_vector_store', MagicMock())
-
 
     response = client.get(f"{API_V1_PREFIX}/health")
     assert response.status_code == 200

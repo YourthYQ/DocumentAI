@@ -39,8 +39,6 @@ jobs:
           PINECONE_API_KEY: "test"
           PINECONE_ENVIRONMENT: "test"
           PINECONE_INDEX_NAME: "test-index"
-          MONGO_URI: "mongodb://localhost:27017"
-          MONGO_DB_NAME: "test_db"
           REDIS_HOST: "localhost"
           REDIS_PORT: "6379"
         run: pytest tests/ -v --tb=short
